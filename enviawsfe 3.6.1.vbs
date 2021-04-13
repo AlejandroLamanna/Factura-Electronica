@@ -1,4 +1,4 @@
-'' @script EnviaAfip 3.6   06-04-2021
+'' @script EnviaAfip 3.6.1   06-04-2021
 'EnviaWsfe  Con WSFE1 y WSMTXCA
 'descripcion Autoriza el comprobante conectandose al servicio web de la AFIP con detalle de Productos.
 '-------------------------------------------------------------------------------
@@ -35,13 +35,13 @@ xUtilizaPathInstalacionSA = False
 'Empresa
 xValid     = False
 xSintecrom = False
-xZSA       = True
+xZSA       = False
 xCabal     = False
 xEgramar   = False
 xProdalsa  = False
 xBinova    = False
 xStenfar   = False
-xCilo	  = False				  
+xCilo	  = True				  
 
 'Monedas (Comentar las que no corresponden)
 	
@@ -1052,6 +1052,7 @@ STOP
 							 End if			
 						End if
 					End if
+				End if
 					
 	            '------ Fin Modificado el 22/12/2019 para Prodalsa porque usa un solo destinatario para consumidor final
 '*******************************************************************************
@@ -1236,12 +1237,13 @@ STOP
 '*******************************************************************************
 '*******************************************************************************
 				If xValid Then
-					If Round(CDbl(round(imp_total,2)) - CDbl(round(Imp_TotalCalculado,2)),2)> 0 Then imp_op_ex = imp_op_ex + Round(CDbl(round(imp_total,2)) - CDbl(round(Imp_TotalCalculado,2)),2)
-				Then	
-			
+					If Round(CDbl(round(imp_total,2)) - CDbl(round(Imp_TotalCalculado,2)),2)> 0 Then 
+					   imp_op_ex = imp_op_ex + Round(CDbl(round(imp_total,2)) - CDbl(round(Imp_TotalCalculado,2)),2)	
+					End if
+				End if
+        		
 				If CDbl(round(imp_total,2)) - CDbl(round(Imp_TotalCalculado,2)) <= imp_Tolerancia Then  Imp_Total = Imp_TotalCalculado
-				
-                               
+				                       
                 If xWSMTXCA Then
 				stop
 				   obs = "" 'Acá pueden ir las observaciones que se necesiten en la factura 
@@ -1295,66 +1297,64 @@ STOP
 stop
 				   'set xFacturaVinculada = pComprobante.VinculoTr
                    set xComprobanteAsociado = nothing
-                   If xProdalsa or xZSA or xCabal or xEgramar Then
-                      If Not pComprobante.boextension.AFIP_COMPROBANTE_ASOCIADO is Nothing Then
-					     set xComprobanteAsociado = pComprobante.boextension.AFIP_COMPROBANTE_ASOCIADO
-					  End If			   
-				   If xValid Then
-						set xComprobanteAsociado = pComprobante.VinculoTr
-				   End if
-				   If not xComprobanteAsociado is Nothing Then
+						If xProdalsa or xZSA or xCabal or xEgramar Then
+							  If Not pComprobante.boextension.AFIP_COMPROBANTE_ASOCIADO is Nothing Then
+								 set xComprobanteAsociado = pComprobante.boextension.AFIP_COMPROBANTE_ASOCIADO
+							  End If			   
+						End if
+						If xValid Then
+							set xComprobanteAsociado = pComprobante.VinculoTr
+						End if
+						If not xComprobanteAsociado is Nothing Then
 
-				   	  tipo_DocAsoc = ObtenerTipoComprobante(xComprobanteAsociado)
-
-				      If xEgramar Then
-				   	     pto_vta_DocAsoc = CInt(xComprobanteAsociado.PuntoVenta.Codigo)
-                      Else
-							If xCabal Then
-										 pto_vta_DocAsoc = CInt(xComprobanteAsociado.NUMERADOR.NUMERADOR.CARACTERESPREFIJO)
-							Else
-										 pto_vta_DocAsoc = CInt(xComprobanteAsociado.BOExtension.PuntoVenta.Codigo)
-							End if
-
-					  End If
-
-				   	  'nro_DocAsoc     = cint(right(xComprobanteAsociado.numerodocumento,8))
-				   	  nro_DocAsoc     = clng(right(xComprobanteAsociado.numerodocumento,8))
-					  fecha_DocAsoc   = year(xComprobanteAsociado.FechaActual) & right("00" & month(xComprobanteAsociado.FechaActual),2) & right("00" & day(xComprobanteAsociado.FechaActual),2)
+							tipo_DocAsoc = ObtenerTipoComprobante(xComprobanteAsociado)
+							  If xEgramar Then
+								 pto_vta_DocAsoc = CInt(xComprobanteAsociado.PuntoVenta.Codigo)
+							  Else
+									If xCabal Then
+												 pto_vta_DocAsoc = CInt(xComprobanteAsociado.NUMERADOR.NUMERADOR.CARACTERESPREFIJO)
+									Else
+												 pto_vta_DocAsoc = CInt(xComprobanteAsociado.BOExtension.PuntoVenta.Codigo)
+									End if
+							  End If
+							'nro_DocAsoc     = cint(right(xComprobanteAsociado.numerodocumento,8))
+							nro_DocAsoc     = clng(right(xComprobanteAsociado.numerodocumento,8))
+							fecha_DocAsoc   = year(xComprobanteAsociado.FechaActual) & right("00" & month(xComprobanteAsociado.FechaActual),2) & right("00" & day(xComprobanteAsociado.FechaActual),2)
  
-                      If xWSMTXCA Then
-						 ObtenerDatosComprobante   = WSFACT.AgregarCmpAsoc(tipo_DocAsoc, pto_vta_DocAsoc, nro_DocAsoc)
-				   	  Else   
-						 ObtenerDatosComprobante   = WSFACT.AgregarCmpAsoc(tipo_DocAsoc, pto_vta_DocAsoc, nro_DocAsoc,nContribuyente,fecha_DocAsoc)
-                      End If
+							  If xWSMTXCA Then
+								 ObtenerDatosComprobante   = WSFACT.AgregarCmpAsoc(tipo_DocAsoc, pto_vta_DocAsoc, nro_DocAsoc)
+							  Else   
+								 ObtenerDatosComprobante   = WSFACT.AgregarCmpAsoc(tipo_DocAsoc, pto_vta_DocAsoc, nro_DocAsoc,nContribuyente,fecha_DocAsoc)
+							  End If
 
-                   Else
-                      If xProdalsa or xZSA or xCabal or xEgramar Then
+						Else
+							  If xProdalsa or xZSA or xCabal or xEgramar Then
 
-                         fecha_desde_DocAsoc = Cdate(pComprobante.boextension.AFIP_PERIODO_DESDE) 
-                         If xWSMTXCA Then
-                            fecha_desde_DocAsoc = DatePart("yyyy", fecha_desde_DocAsoc) &"-"& string(2-len(DatePart("m", fecha_desde_DocAsoc)),"0") & DatePart("m", fecha_desde_DocAsoc) &"-"& string(2-len(DatePart("d", fecha_desde_DocAsoc)),"0") & DatePart("d", fecha_desde_DocAsoc)	
-                         Else
-                            fecha_desde_DocAsoc = DatePart("yyyy", fecha_desde_DocAsoc) & string(2-len(DatePart("m", fecha_desde_DocAsoc)),"0") & DatePart("m", fecha_desde_DocAsoc) & string(2-len(DatePart("d", fecha_desde_DocAsoc)),"0") & DatePart("d", fecha_desde_DocAsoc)	
-                         End If
-                         
-                         fecha_hasta_DocAsoc = Cdate(pComprobante.boextension.AFIP_PERIODO_HASTA)
-                         If xWSMTXCA Then
-                            fecha_hasta_DocAsoc = DatePart("yyyy", fecha_hasta_DocAsoc) &"-"& string(2-len(DatePart("m", fecha_hasta_DocAsoc)),"0") & DatePart("m", fecha_hasta_DocAsoc) &"-"& string(2-len(DatePart("d", fecha_hasta_DocAsoc)),"0") & DatePart("d", fecha_hasta_DocAsoc)	
-                         Else
-                            fecha_hasta_DocAsoc = DatePart("yyyy", fecha_hasta_DocAsoc) & string(2-len(DatePart("m", fecha_hasta_DocAsoc)),"0") & DatePart("m", fecha_hasta_DocAsoc) & string(2-len(DatePart("d", fecha_hasta_DocAsoc)),"0") & DatePart("d", fecha_hasta_DocAsoc)	
-                         End If
-                         
-                         ObtenerPeriodoComprobante = WSFACT.AgregarPeriodoComprobantesAsociados(fecha_desde_DocAsoc, fecha_hasta_DocAsoc)				   
+								 fecha_desde_DocAsoc = Cdate(pComprobante.boextension.AFIP_PERIODO_DESDE) 
+								 If xWSMTXCA Then
+									fecha_desde_DocAsoc = DatePart("yyyy", fecha_desde_DocAsoc) &"-"& string(2-len(DatePart("m", fecha_desde_DocAsoc)),"0") & DatePart("m", fecha_desde_DocAsoc) &"-"& string(2-len(DatePart("d", fecha_desde_DocAsoc)),"0") & DatePart("d", fecha_desde_DocAsoc)	
+								 Else
+									fecha_desde_DocAsoc = DatePart("yyyy", fecha_desde_DocAsoc) & string(2-len(DatePart("m", fecha_desde_DocAsoc)),"0") & DatePart("m", fecha_desde_DocAsoc) & string(2-len(DatePart("d", fecha_desde_DocAsoc)),"0") & DatePart("d", fecha_desde_DocAsoc)	
+								 End If
+								 
+								 fecha_hasta_DocAsoc = Cdate(pComprobante.boextension.AFIP_PERIODO_HASTA)
+								 If xWSMTXCA Then
+									fecha_hasta_DocAsoc = DatePart("yyyy", fecha_hasta_DocAsoc) &"-"& string(2-len(DatePart("m", fecha_hasta_DocAsoc)),"0") & DatePart("m", fecha_hasta_DocAsoc) &"-"& string(2-len(DatePart("d", fecha_hasta_DocAsoc)),"0") & DatePart("d", fecha_hasta_DocAsoc)	
+								 Else
+									fecha_hasta_DocAsoc = DatePart("yyyy", fecha_hasta_DocAsoc) & string(2-len(DatePart("m", fecha_hasta_DocAsoc)),"0") & DatePart("m", fecha_hasta_DocAsoc) & string(2-len(DatePart("d", fecha_hasta_DocAsoc)),"0") & DatePart("d", fecha_hasta_DocAsoc)	
+								 End If
+								 
+								 ObtenerPeriodoComprobante = WSFACT.AgregarPeriodoComprobantesAsociados(fecha_desde_DocAsoc, fecha_hasta_DocAsoc)				   
 
-				      End if
-					  If xValid or xStenfar or xSintecrom or xCilo Then
-						    fecha_desde_DocAsoc 	= pComprobante.FechaActual - 15
-							fecha_desde_DocAsoc 	= year(fecha_desde_DocAsoc) & right("00" & month(fecha_desde_DocAsoc),2) & right("00" & day(fecha_desde_DocAsoc),2)
-							fecha_hasta_DocAsoc 	= pComprobante.FechaActual
-							fecha_hasta_DocAsoc   	= year(fecha_hasta_DocAsoc) & right("00" & month(fecha_hasta_DocAsoc),2) & right("00" & day(fecha_hasta_DocAsoc),2)
-							ObtenerPeriodoComprobante = WSFACT.AgregarPeriodoComprobantesAsociados(fecha_desde_DocAsoc, fecha_hasta_DocAsoc)
-					  End if
-				   End if
+							  End if
+							  If xValid or xStenfar or xSintecrom or xCilo Then
+									fecha_desde_DocAsoc 	= pComprobante.FechaActual - 15
+									fecha_desde_DocAsoc 	= year(fecha_desde_DocAsoc) & right("00" & month(fecha_desde_DocAsoc),2) & right("00" & day(fecha_desde_DocAsoc),2)
+									fecha_hasta_DocAsoc 	= pComprobante.FechaActual
+									fecha_hasta_DocAsoc   	= year(fecha_hasta_DocAsoc) & right("00" & month(fecha_hasta_DocAsoc),2) & right("00" & day(fecha_hasta_DocAsoc),2)
+									ObtenerPeriodoComprobante = WSFACT.AgregarPeriodoComprobantesAsociados(fecha_desde_DocAsoc, fecha_hasta_DocAsoc)
+							  End if
+						End if
                 '------ Fin Adaptado 28/07/2020 porque neceita vincular comprobantes o fechas de periodo para las ND y NC
 '*******************************************************************************
                 '------ Fin Agregado 22/12/2019 para WSMTXCA porque neceita vincular comprobantes
@@ -1505,10 +1505,8 @@ stop
 
 '------ Agregado para WSMTXCA 10/10/2019
                 If xWSMTXCA Then
-				
-				stop:stop
-				
-	               For Each xItem In pComprobante.ItemsTransaccion
+					stop:stop
+					For Each xItem In pComprobante.ItemsTransaccion
 		               Set oPosicion = GetPosicionImpuestoPorCodigo(xItem.Referencia, "010")
 
 		               If xItem.Referencia.BOExtension.UNIDADREFERENCIAAFIP = 0 Then
@@ -1532,59 +1530,60 @@ stop
                        imp_subtotal = "121.00"
 
 		               'Agrega el IVA:
-		               If (oPosicion.PosicionImpuesto.Codigo = "EXE") Then
-                          'cod_iva = 3
-                          cod_iva = 2
-                          imp_iva = "0.00"		
-                          imp_subtotal = xItem.Total_Importe
-		               Else
-		                  Set oIva = GetImpuestoTdPorCodigo(xItem, "010")
-		                  xTotalItem = xItem.Total_Importe
-		                  xIVAItem = oIva.Importe
-			              If (oPosicion.Coeficiente = 0) Then
-		                     cod_iva = 3
-			              ElseIf (oPosicion.Coeficiente = 10.5) Then
-		                     cod_iva = 4
-			              ElseIf (oPosicion.Coeficiente = 21) Then
-		                     cod_iva = 5
-			              ElseIf (oPosicion.Coeficiente = 27) Then
-		                     cod_iva = 6
-			              End If
-		                  If pComprobante.Nota = "A" Then
-                             imp_iva = xIVAItem		
-		   	                 imp_subtotal = xTotalItem + xIVAItem
-		                  Else
-                             imp_iva = "0.00"		
-		   	                 imp_subtotal = xTotalItem + xIVAItem
-		                  End If
-		               End If
+						If (oPosicion.PosicionImpuesto.Codigo = "EXE") Then
+							  'cod_iva = 3
+							  cod_iva = 2
+							  imp_iva = "0.00"		
+							  imp_subtotal = xItem.Total_Importe
+						Else
+							  Set oIva = GetImpuestoTdPorCodigo(xItem, "010")
+							  xTotalItem = xItem.Total_Importe
+							  xIVAItem = oIva.Importe
+							  If (oPosicion.Coeficiente = 0) Then
+								 cod_iva = 3
+							  ElseIf (oPosicion.Coeficiente = 10.5) Then
+								 cod_iva = 4
+							  ElseIf (oPosicion.Coeficiente = 21) Then
+								 cod_iva = 5
+							  ElseIf (oPosicion.Coeficiente = 27) Then
+								 cod_iva = 6
+							  End If
+							  If pComprobante.Nota = "A" Then
+								 imp_iva = xIVAItem		
+								 imp_subtotal = xTotalItem + xIVAItem
+							  Else
+								 imp_iva = "0.00"		
+								 imp_subtotal = xTotalItem + xIVAItem
+							  End If
+						End If
 stop					   
 
 '*******************************************************************************
 '*******************************************************************************
                        '------ Agregado 08/03/2021 para Forzar Dolarización de Comprobantes
-		       If FuerzaDolarizacionComprobante Then
-			  If precio > 0 Then
-                             precio = Round((precio/CotizacionDolar),2)
-		          End If
-			  If bonif > 0 Then
-                             bonif = Round((bonif/CotizacionDolar),2)
-		          End If
-			  If imp_iva > 0 Then
-                             imp_iva = Round((imp_iva/CotizacionDolar),2)
-		          End If
-			  If imp_subtotal > 0 Then
-                             imp_subtotal = Round((imp_subtotal/CotizacionDolar),2)
-		          End If
-		       End If
+						If FuerzaDolarizacionComprobante Then
+							If precio > 0 Then
+								precio = Round((precio/CotizacionDolar),2)
+							End If
+							If bonif > 0 Then
+								 bonif = Round((bonif/CotizacionDolar),2)
+							End If
+							If imp_iva > 0 Then
+								imp_iva = Round((imp_iva/CotizacionDolar),2)
+							End If
+							If imp_subtotal > 0 Then
+								imp_subtotal = Round((imp_subtotal/CotizacionDolar),2)
+							End If
+						End If
                        '------ Fin Agregado 08/03/2021 para Forzar Dolarización de Comprobantes
 '*******************************************************************************
 '*******************************************************************************
 
                        ok = WSFACT.AgregarItem(u_mtx, cod_mtx, codigo, ds, qty, umed, precio, bonif, cod_iva, imp_iva, imp_subtotal)
 
-	               Next
+					Next
                 End If
+				
 '------ FIN Agregado para WSMTXCA 10/10/2019
 
 
