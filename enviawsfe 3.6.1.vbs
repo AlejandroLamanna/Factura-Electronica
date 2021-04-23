@@ -1,4 +1,4 @@
-'' @script EnviaAfip 3.6.1   06-04-2021
+'' @script EnviaAfip 3.6.1   23-04-2021 Agregado xCabal en Vinculo
 'EnviaWsfe  Con WSFE1 y WSMTXCA
 'descripcion Autoriza el comprobante conectandose al servicio web de la AFIP con detalle de Productos.
 '-------------------------------------------------------------------------------
@@ -34,14 +34,14 @@ xUtilizaPathInstalacionSA = False
 	
 'Empresa
 xValid     = False
-xSintecrom = False
+xSintecrom = True
 xZSA       = False
 xCabal     = False
 xEgramar   = False
 xProdalsa  = False
 xBinova    = False
 xStenfar   = False
-xCilo	  = True				  
+xCilo	  = False				  
 
 'Monedas (Comentar las que no corresponden)
 	
@@ -684,8 +684,8 @@ Public Function ActualizaCamposTransaccion(pcomprobante,WSFACT,punto_vta,tipo_cb
 'Sintecrom
         If xSintecrom Then
 		   pComprobante.BOExtension.CAE	= WSFACT.CAE
-		   pComprobante.BOExtension.FECHAVTOCAE = cdate(mid(WSFACT.Vencimiento,7,2)&"/"&mid(WSFACT.Vencimiento,5,2)&"/"&mid(WSFACT.Vencimiento,1,4))
-		   strFechaCae = Year(pComprobante.BOExtension.FECHAVTOCAE) & Right("0" & Month(pComprobante.BOExtension.FECHAVTOCAE), 2) & Right("0" & Day(pComprobante.BOExtension.FECHAVTOCAE), 2)
+		   pComprobante.BOExtension.VENCIMIENTOCAE = cdate(mid(WSFACT.Vencimiento,7,2)&"/"&mid(WSFACT.Vencimiento,5,2)&"/"&mid(WSFACT.Vencimiento,1,4))
+		   strFechaCae = Year(pComprobante.BOExtension.VENCIMIENTOCAE) & Right("0" & Month(pComprobante.BOExtension.VENCIMIENTOCAE), 2) & Right("0" & Day(pComprobante.BOExtension.VENCIMIENTOCAE), 2)
 		   pComprobante.BOExtension.CODIGODEBARRAS = ArmoCodigoBarra(pComprobante,tipo_cbte,WSFACT.Cuit,Right("00000" & CStr(punto_vta ),5),WSFACT.CAE,strFechaCae)
         End If
 
@@ -693,9 +693,10 @@ Public Function ActualizaCamposTransaccion(pcomprobante,WSFACT,punto_vta,tipo_cb
 'Cabal
         If xCabal Then
 		   pComprobante.BOExtension.CAE	= WSFACT.CAE
-		   pComprobante.BOExtension.FECHAVTOCAE = cdate(mid(WSFACT.Vencimiento,7,2)&"/"&mid(WSFACT.Vencimiento,5,2)&"/"&mid(WSFACT.Vencimiento,1,4))
-		   strFechaCae = Year(pComprobante.BOExtension.FECHAVTOCAE) & Right("0" & Month(pComprobante.BOExtension.FECHAVTOCAE), 2) & Right("0" & Day(pComprobante.BOExtension.FECHAVTOCAE), 2)
-		   pComprobante.BOExtension.CODIGODEBARRAS = ArmoCodigoBarra(pComprobante,tipo_cbte,WSFACT.Cuit,Right("00000" & CStr(punto_vta ),5),WSFACT.CAE,strFechaCae)
+		   pComprobante.BOExtension.VencimientoCAE = cdate(mid(WSFACT.Vencimiento,7,2)&"/"&mid(WSFACT.Vencimiento,5,2)&"/"&mid(WSFACT.Vencimiento,1,4))
+		   strFechaCae = Year(pComprobante.BOExtension.VencimientoCAE) & Right("0" & Month(pComprobante.BOExtension.VencimientoCAE), 2) & Right("0" & Day(pComprobante.BOExtension.VencimientoCAE), 2)
+		   pComprobante.BOExtension.CODIGObarracae = ArmoCodigoBarra(pComprobante,tipo_cbte,WSFACT.Cuit,Right("00000" & CStr(punto_vta ),5),WSFACT.CAE,strFechaCae)
+           pComprobante.NumeroDocumento = CStr(punto_vta )  & Right("00000000" & CStr(WSFACT.CbteNro), 8)
         End If
 		
 '***************************************************************************************************************************************	
@@ -867,7 +868,9 @@ Private Function ObtenerVencimientoPago(ByRef pComprobante)
 		   
 			Exit For
 		Next
-
+	Else
+	
+	    dVencimiento = dVencimiento + 10
 	End If
 	ObtenerVencimientoPago = year(dVencimiento) & right("00" & month(dVencimiento),2) & right("00" & day(dVencimiento),2)
 	' Devuelve el vencimiento.
@@ -881,7 +884,7 @@ End Function
 ' @descripcion Armo el código de barras.
 '-------------------------------------------------------------------------------
 Private Function ArmoCodigoBarra(pComprobante,strcodigocomprobante,strcuit,strpuntoventa,strcae,strFecha)
-	If xValid or xStenfar Then
+	If xValid or xStenfar or xSintecrom Then
 		xSQL = "SELECT calipso.FN_CODIGOBARRA_CAE('" & strcuit & strcodigocomprobante & strPuntoVenta & strCAE & strFecha & "') AS CODIGO "
 	Else
 		xSQL = "SELECT dbo.FN_CODIGOBARRA_CAE('" & strcuit & strcodigocomprobante & strPuntoVenta & strCAE & strFecha & "') AS CODIGO "
@@ -1181,7 +1184,7 @@ STOP
 				
 				imp_neto = Round(TotalNetoGravado,2)
 				imp_iva  = Round(valoriva_0 + valoriva_105 + valoriva_21 + valoriva_27,2)
-				imp_trib = Total_Otros_Tributos 'Impuestos como IIBB y Percepciones ver como hacer
+				imp_trib = Round(Total_Otros_Tributos,2) 'Impuestos como IIBB y Percepciones ver como hacer
 				Imp_TotalCalculado = imp_neto + imp_iva + Imp_Trib + imp_tot_conc + imp_op_ex
 				 
 '*******************************************************************************
@@ -1255,7 +1258,7 @@ STOP
 
 				If (tipo_cbte = 203 OR tipo_cbte = 202) and pComprobante.BOExtension.MiPyMEs Then  ' Si es una Nota de Credito y es Mipymes obligo a que pongo comprobante asociado
 				   'set xFacturaVinculada = pComprobante.VinculoTr
-				   If xZSA or xEgramar or xProdalsa Then
+				   If xZSA or xEgramar or xProdalsa or xCabal Then
 						set xFacturaVinculada = pComprobante.boextension.cpvinculado.TrOriginante
 				   Else
 						set xFacturaVinculada = pComprobante.VinculoTr
@@ -1399,7 +1402,7 @@ stop
 					For Each oImpuesto In pComprobante.Impuestos
 						If (oImpuesto.Importe > 0) Then
 							If oImpuesto.DefinicionImpuesto.Impuesto.Codigo <> "010" Then	
-								If oImpuesto.DefinicionImpuesto.Impuesto.Tipo = "PER" Then   'Perceiciones!!!!!
+								If mid(oImpuesto.DefinicionImpuesto.Impuesto.Tipo,1,3) = "PER" Then   'Perceiciones!!!!!
 									If oImpuesto.Importe > 0 Then
 										AlicuotaTributo 		 	= Round((Round(oImpuesto.Importe,2) * 100) / Round(pComprobante.SubTotal_Importe,2),2)
 										BaseImponibleTributo 		= Round(pComprobante.SubTotal_Importe,2)
@@ -1437,7 +1440,7 @@ stop
 'Esta linea es para Stenfar, y no se como Generalizarla sin hacer mucho codigo
 
 						  If oImpuesto.DefinicionImpuesto.Impuesto.Codigo <> "010" Then	
-								If oImpuesto.DefinicionImpuesto.Impuesto.Tipo = "PER" Then   'Perceiciones!!!!!
+								If mid(oImpuesto.DefinicionImpuesto.Impuesto.Tipo,1,3) = "PER" Then   'Perceiciones!!!!!
 
 									If oImpuesto.valor.Importe > 0 Then
 										AlicuotaTributo 		= Round((Round(oImpuesto.valor.Importe,2) * 100) / Round(pComprobante.SubTotal.Importe,2),2)
